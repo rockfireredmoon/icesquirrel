@@ -1,0 +1,333 @@
+grammar Squirrel;
+
+script
+	: block EOF
+	;
+
+block
+	: ('{' stat* '}' ) | stat* 
+	;
+	
+stat
+	: ';'
+    | functioncall
+    | assign
+    | 'break'
+    | 'goto' NAME
+    | 'do' block 'while' exp
+    | local 
+    | 'while' exp block
+    | 'repeat' block 'until' exp
+    | 'if' '(' exp ')' block ( 'else' block )?
+    | 'for' '(' ( local? var ( '=' | '<-') exp )? ';' exp? ';'  incexp? ')' block 
+    | 'foreach' '(' ( NAME ',' )? NAME 'in' exp ')' block
+    | namedfunction
+    | 'throw' exp
+    | 'switch' '(' exp ')' '{' ( ( switchcase+ defaultcase? ) | defaultcase )'}'
+    | 'const' NAME '=' (string | number)
+    | 'enum' NAME '=' enumconstructor 
+    | classdef
+    | retstat
+    | exp
+    ;
+    
+switchcase
+	: 'case' exp ':' stat*
+	;
+
+defaultcase
+	: 'default' ':' stat+
+	;
+   
+funcname
+	: NAME ( '::' NAME)*
+	;
+	 
+classstat
+	:	classconstructor | functiondef | attributesconstructor | stat  
+	;
+	
+assign
+	: attributesconstructor? var ( '=' | '<-') exp
+	;
+	
+retstat
+    : 'return' exp? ';'?
+    ;
+
+varlist
+    : var (',' var)*
+    ;
+
+namelist
+    : NAME (',' NAME)*
+    ;
+	
+parlist
+    : ( NAME ( '=' string)? ( ',' NAME)* ) (',' '...')? | '...' 
+    ;
+    
+//arglist
+//	: arg (',' arg)*
+//	;
+//	
+//arg
+//	: NAME ( '=' exp)?
+//	;
+	
+explist
+    : exp (',' exp)*
+    ;
+
+exp
+	: '(' exp ')'	
+    | 'null' | 'false' | 'true' | number | string		
+	| '...'
+	| delegate
+	| clone
+	| typeof
+	| attributesconstructor functiondef
+	| functiondef								
+    | prefixexp		
+    | assign
+    | exp 'in' exp						
+	| tableconstructor
+	| arrayconstructor		
+	| 'resume' exp					
+	| <assoc=right> exp operatorPower exp			
+	| operatorUnary exp								
+	| exp operatorMulDivMod exp		
+	| exp operatorAddSub exp						
+	| exp operatorComparison exp					
+	| exp operatorAnd exp							
+	| exp operatorOr exp
+    | incexp
+    | exp '?' exp ':' exp
+    //| exp (',' exp)+	
+	;
+	
+clone
+	: 'clone' var
+	;
+	
+delegate
+	: 'delegate' exp ':' exp
+	;
+	
+typeof
+	: 'typeof' var
+	;
+	
+incexp
+	: ( ('++' | '--' ) var ) | ( var ( '++' | '--' ) )  | ( var '+=' exp )   | ( var '-=' exp ) 
+	;
+
+var
+    : ROOT? ( NAME | '(' exp ')' varSuffix ) varSuffix*
+    ;
+
+prefixexp
+    : varOrExp nameAndArgs*
+    ;
+
+functioncall
+    : varOrExp nameAndArgs+
+    ;
+
+varOrExp
+    : var | '(' exp ')'
+    ;
+
+nameAndArgs
+    : ('.' NAME)? args
+    ;
+
+varSuffix
+    : nameAndArgs* ('[' exp ']' | '.' NAME)
+    ;
+
+args
+    : '(' explist? ')' | tableconstructor | string
+    ;
+    
+namedfunction
+	: 'function' funcname funcsig block
+	;
+    
+functiondef
+    : 'function' funcsig block
+    ;
+	
+funcsig
+    : '(' parlist? ')' (':(' namelist ')')? 
+    ;
+    
+classdef
+	: 'class' var attributesconstructor? ( 'extends' var )? '{' classstat* '}'
+	;
+	
+classconstructor
+	: 'constructor' '(' parlist? ')' block
+	;
+	
+local
+	: 'local' fieldlist?
+	;
+
+arrayconstructor
+    : '[' explist? ']'
+    ;
+    
+attributesconstructor
+	: '</' fieldlist* '/>'
+	;
+	
+tableconstructor
+    : '{' fieldlist? '}'
+    ;
+
+enumconstructor
+    : '{' enumlist? '}'
+    ;
+    
+enumlist
+    : enumitem (','? enumitem)* ','?
+	;
+	
+enumitem
+	: NAME '=' ( string | number )
+	;
+
+fieldlist
+    : field (','? field)* ','?
+    ;
+
+field
+    : '[' exp ']' '=' exp | NAME '=' exp | exp | namedfunction
+    ;
+
+fieldsep
+    : ','
+    ;
+
+operatorOr 
+	: '||';
+
+operatorAnd 
+	: '&&';
+
+operatorComparison 
+	: '<' | '>' | '<=' | '>=' | '!=' | '==' | 'instanceof';
+
+operatorAddSub
+	: '+' | '-';
+
+operatorMulDivMod
+	: '*' | '/' | '%';
+
+operatorUnary
+    : '~' | '-' | '!';
+
+operatorPower
+    : '^';
+
+number
+    : INT | HEX | FLOAT | CHAR
+    ;
+
+string
+    : NORMALSTRING | VERBATIMSTRING
+    ;
+
+// LEXER
+
+ROOT
+	: '::'
+	;
+	
+NAME
+    : ( [a-zA-Z] | '_' )+ ( [a-zA-Z0-9] | '_' )* 
+    ;
+
+NORMALSTRING
+    : '"' ( EscapeSequence | ~('\\'|'"') )* '"' 
+    ;
+
+VERBATIMSTRING 
+	: '@"' ( EscapeSequence | ~["\\] | '""')* '"' ;
+	
+
+INT
+    : Digit+
+    ;
+
+HEX
+    : '0' [xX] HexDigit+
+    ;
+
+FLOAT
+    : Digit+ '.' Digit* ExponentPart?
+    | '.' Digit+ ExponentPart?
+    | Digit+ ExponentPart
+    ;
+
+CHAR 
+	: '\'' Character '\''
+	;
+
+fragment 
+Character 
+	: ~['\\] 
+	;
+
+fragment
+ExponentPart
+    : [eE] [+-]? Digit+
+    ;
+
+fragment
+HexExponentPart
+    : [pP] [+-]? Digit+
+    ;
+
+fragment
+EscapeSequence
+    : '\\' [abfnrtvz"'\\]
+    | '\\' '\r'? '\n'
+    | DecimalEscape
+    | HexEscape
+    ;
+    
+fragment
+DecimalEscape
+    : '\\' Digit
+    | '\\' Digit Digit
+    | '\\' [0-2] Digit Digit
+    ;
+    
+fragment
+HexEscape
+    : '\\' 'x' HexDigit HexDigit
+    ;
+
+fragment
+Digit
+    : [0-9]
+    ;
+
+fragment
+HexDigit
+    : [0-9a-fA-F]
+    ;
+
+COMMENT : '/*' .*? '*/' -> skip ;
+
+LINE_COMMENT : '//' ~[\r\n]* -> skip ;
+    
+WS  
+    : [ \t\u000C\r\n]+ -> skip
+    ;
+
+SHEBANG
+    : '#' '!' ~('\n'|'\r')* -> channel(HIDDEN)
+    ;
