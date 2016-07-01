@@ -6,6 +6,18 @@
 	<description>Java implementation of the Squirrel language, it's standard library and tools.</description>
 	<groupId>org.icemoon</groupId>
 	<version>0.0.1-SNAPSHOT</version>
+	<distributionManagement>
+		<repository>
+			<id>theanubianwar-releases</id>
+			<name>The Anubian War - Releases Repository</name>
+			<url>scp://files.theanubianwar.com/srv/files.theanubianwar.com/public/htdocs/maven/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>theanubianwar-snapshots</id>
+			<name>The Anubian War - Snapshots Repository</name>
+			<url>scp://files.theanubianwar.com/srv/files.theanubianwar.com/public/htdocs/maven/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
 	<!-- <parent>
 		<groupId>org.icemoon</groupId>
 		<artifactId>ice</artifactId>
@@ -13,7 +25,13 @@
 		<relativePath>../ice</relativePath>
 	</parent> -->
 	<build>
-
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-ssh</artifactId>
+				<version>2.9</version>
+			</extension>
+		</extensions>
 		<pluginManagement>
 
 			<plugins>
